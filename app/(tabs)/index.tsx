@@ -1,98 +1,94 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { MapProfileFab } from '@/components/map/map-profile-fab';
+import { ParkingMap } from '@/components/map/parking-map';
+import { ProfileMenuModal } from '@/components/map/profile-menu-modal';
+import { ReservationPaymentModal } from '@/components/map/reservation-payment-modal';
+import { ZoneDetailBottomSheet } from '@/components/map/zone-detail-bottom-sheet';
+import type { ParkingMapMarker } from '@/data/mock-parking-markers';
+import { MOCK_PARKING_MARKERS } from '@/data/mock-parking-markers';
+import { MOCK_USER_PROFILE } from '@/data/mock-user-profile';
+import { useUserMapLocation } from '@/hooks/use-user-map-location';
+import { distanceBetweenKm } from '@/lib/distance-km';
 
-export default function HomeScreen() {
+type PaymentContext = {
+  marker: ParkingMapMarker;
+  distanceKm: number;
+};
+
+export default function MapScreen() {
+  const userLocation = useUserMapLocation();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [selectedMarker, setSelectedMarker] = useState<ParkingMapMarker | null>(null);
+  const [paymentContext, setPaymentContext] = useState<PaymentContext | null>(null);
+
+  const distanceKm = useMemo(() => {
+    if (!selectedMarker) return 0;
+    if (userLocation) {
+      return distanceBetweenKm(
+        userLocation.latitude,
+        userLocation.longitude,
+        selectedMarker.latitude,
+        selectedMarker.longitude
+      );
+    }
+    return selectedMarker.fallbackDistanceKm;
+  }, [selectedMarker, userLocation]);
+
+  const closeZoneSheet = useCallback(() => {
+    setSelectedMarker(null);
+  }, []);
+
+  const openZoneDetail = useCallback((m: ParkingMapMarker) => {
+    setSelectedMarker(null);
+    queueMicrotask(() => setSelectedMarker(m));
+  }, []);
+
+  const openPaymentModal = useCallback(() => {
+    if (!selectedMarker || selectedMarker.availableSpots <= 0) return;
+    setPaymentContext({
+      marker: selectedMarker,
+      distanceKm,
+    });
+  }, [selectedMarker, distanceKm]);
+
+  const closePaymentModal = useCallback(() => {
+    setPaymentContext(null);
+  }, []);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <SafeAreaView className="flex-1 bg-pn-sky-fade" edges={['top']}>
+      <View className="relative flex-1">
+        <ParkingMap
+          markers={MOCK_PARKING_MARKERS}
+          userLocation={userLocation}
+          onMarkerSelect={openZoneDetail}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
-
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <MapProfileFab
+          fullName={MOCK_USER_PROFILE.name}
+          onPress={() => setProfileOpen(true)}
+        />
+        <ZoneDetailBottomSheet
+          key={selectedMarker?.id ?? 'zone-detail-closed'}
+          marker={selectedMarker}
+          distanceKm={distanceKm}
+          onClose={closeZoneSheet}
+          onReservePress={openPaymentModal}
+        />
+        <ReservationPaymentModal
+          visible={!!paymentContext}
+          onClose={closePaymentModal}
+          marker={paymentContext?.marker ?? null}
+          distanceKm={paymentContext?.distanceKm ?? 0}
+        />
+        <ProfileMenuModal
+          visible={profileOpen}
+          onClose={() => setProfileOpen(false)}
+          user={MOCK_USER_PROFILE}
+        />
+      </View>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});

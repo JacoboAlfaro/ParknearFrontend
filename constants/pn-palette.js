@@ -1,0 +1,15 @@
+module.exports = {
+  navy: '#1E3A5F',
+  skyTop: '#6BB8E8',
+  skyMid: '#9FD4F0',
+  skyBottom: '#D4ECF8',
+  skyFade: '#EEF8FC',
+  slogan: '#4A8EC4',
+  accent: '#7EC8E3',
+  slate: '#6B8698',
+  border: '#C5D5E0',
+  white: '#FFFFFF',
+  card: 'rgba(255, 255, 255, 0.9)',
+  cardCyan: 'rgba(200, 235, 245, 0.82)',
+  skyline: '#7A93A8',
+};
