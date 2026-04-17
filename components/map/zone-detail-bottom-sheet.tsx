@@ -50,7 +50,7 @@ export function ZoneDetailBottomSheet({ marker, distanceKm, onClose, onReservePr
   }, []);
 
   const onReserve = useCallback(() => {
-    if (!marker || marker.availableSpots <= 0) return;
+    if (!marker || marker.cupos_disponibles <= 0) return;
     onReservePress?.();
   }, [marker, onReservePress]);
 
@@ -81,10 +81,10 @@ export function ZoneDetailBottomSheet({ marker, distanceKm, onClose, onReservePr
                     Zonas azules
                   </Text>
                   <Text className="mt-1 text-2xl font-bold text-pn-navy" numberOfLines={2}>
-                    {marker.streetLine}
+                    {marker.linea_calle}
                   </Text>
                   <Text className="mt-0.5 text-sm text-pn-navy/50" numberOfLines={1}>
-                    {marker.title}
+                    {marker.titulo}
                   </Text>
                 </View>
                 <View className="flex-row items-center gap-1">
@@ -117,12 +117,12 @@ export function ZoneDetailBottomSheet({ marker, distanceKm, onClose, onReservePr
               <Text className="mt-3 text-[15px] text-pn-navy/75">
                 Plazas disponibles{' '}
                 <Text className="font-bold text-[#1d4ed8]">
-                  {marker.availableSpots}{' '}
-                  {marker.availableSpots === 1 ? 'cupo' : 'cupos'}
+                  {marker.cupos_disponibles}{' '}
+                  {marker.cupos_disponibles === 1 ? 'cupo' : 'cupos'}
                 </Text>
               </Text>
 
-              {marker.availableSpots > 0 ? (
+              {marker.cupos_disponibles > 0 ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Reservar"

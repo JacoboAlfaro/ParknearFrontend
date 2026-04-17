@@ -7,9 +7,10 @@ import { ParkingMap } from '@/components/map/parking-map';
 import { ProfileMenuModal } from '@/components/map/profile-menu-modal';
 import { ReservationPaymentModal } from '@/components/map/reservation-payment-modal';
 import { ZoneDetailBottomSheet } from '@/components/map/zone-detail-bottom-sheet';
+import { useAuth } from '@/contexts/auth-context';
 import type { ParkingMapMarker } from '@/data/mock-parking-markers';
 import { MOCK_PARKING_MARKERS } from '@/data/mock-parking-markers';
-import { MOCK_USER_PROFILE } from '@/data/mock-user-profile';
+import { usuarioPerfilDesdeSesionMapa } from '@/data/mock-user-profile';
 import { useUserMapLocation } from '@/hooks/use-user-map-location';
 import { distanceBetweenKm } from '@/lib/distance-km';
 
@@ -19,6 +20,7 @@ type PaymentContext = {
 };
 
 export default function MapScreen() {
+  const { user: sessionUser } = useAuth();
   const userLocation = useUserMapLocation();
   const [profileOpen, setProfileOpen] = useState(false);
   const [selectedMarker, setSelectedMarker] = useState<ParkingMapMarker | null>(null);
@@ -30,11 +32,11 @@ export default function MapScreen() {
       return distanceBetweenKm(
         userLocation.latitude,
         userLocation.longitude,
-        selectedMarker.latitude,
-        selectedMarker.longitude
+        selectedMarker.latitud,
+        selectedMarker.longitud
       );
     }
-    return selectedMarker.fallbackDistanceKm;
+    return selectedMarker.distancia_aprox_km;
   }, [selectedMarker, userLocation]);
 
   const closeZoneSheet = useCallback(() => {
@@ -47,7 +49,7 @@ export default function MapScreen() {
   }, []);
 
   const openPaymentModal = useCallback(() => {
-    if (!selectedMarker || selectedMarker.availableSpots <= 0) return;
+    if (!selectedMarker || selectedMarker.cupos_disponibles <= 0) return;
     setPaymentContext({
       marker: selectedMarker,
       distanceKm,
@@ -58,6 +60,13 @@ export default function MapScreen() {
     setPaymentContext(null);
   }, []);
 
+  const perfilMapa = useMemo(() => {
+    if (!sessionUser) {
+      return usuarioPerfilDesdeSesionMapa('Usuario', 'usuario@parknear.app');
+    }
+    return usuarioPerfilDesdeSesionMapa(sessionUser.displayName, sessionUser.email);
+  }, [sessionUser]);
+
   return (
     <SafeAreaView className="flex-1 bg-pn-sky-fade" edges={['top']}>
       <View className="relative flex-1">
@@ -67,7 +76,7 @@ export default function MapScreen() {
           onMarkerSelect={openZoneDetail}
         />
         <MapProfileFab
-          fullName={MOCK_USER_PROFILE.name}
+          fullName={sessionUser?.displayName ?? 'Usuario'}
           onPress={() => setProfileOpen(true)}
         />
         <ZoneDetailBottomSheet
@@ -86,7 +95,7 @@ export default function MapScreen() {
         <ProfileMenuModal
           visible={profileOpen}
           onClose={() => setProfileOpen(false)}
-          user={MOCK_USER_PROFILE}
+          user={perfilMapa}
         />
       </View>
     </SafeAreaView>

@@ -40,8 +40,8 @@ export function ReservationPaymentModal({ visible, onClose, marker, distanceKm }
     }
     if (!marker) return;
     Alert.alert(
-      'Pago',
-      `Simulación: ${formatCopCompact(marker.priceCop)} · placa ${trimmed}`
+      'Reserva registrada',
+      `${formatCopCompact(marker.precio_cop)} · placa ${trimmed}`,
     );
     handleClose();
   }, [plate, marker, handleClose]);
@@ -50,9 +50,9 @@ export function ReservationPaymentModal({ visible, onClose, marker, distanceKm }
   const spotsLabel =
     marker === null
       ? ''
-      : marker.availableSpots === 1
-        ? '1 zona'
-        : `${marker.availableSpots} zonas`;
+      : marker.cupos_disponibles === 1
+        ? '1 plaza'
+        : `${marker.cupos_disponibles} plazas`;
 
   return (
     <Modal
@@ -75,7 +75,7 @@ export function ReservationPaymentModal({ visible, onClose, marker, distanceKm }
           <View className="relative z-10 overflow-hidden rounded-3xl" style={{ backgroundColor: POPUP_BLUE }}>
             <View className="flex-row items-start justify-between px-5 pb-3 pt-5">
               <Text className="max-w-[85%] text-xl font-bold leading-tight text-white">
-                Zonas azules {marker.streetLine}
+                Zonas azules {marker.linea_calle}
               </Text>
               <Pressable
                 accessibilityRole="button"
@@ -99,14 +99,14 @@ export function ReservationPaymentModal({ visible, onClose, marker, distanceKm }
               </Text>
               <Text className="mt-5 text-[15px] text-white/90">Total a pagar</Text>
               <Text className="mt-1 text-4xl font-bold text-white">
-                {formatCopCompact(marker.priceCop)}
+                {formatCopCompact(marker.precio_cop)}
               </Text>
             </View>
 
             <View className="px-5 pb-6 pt-2">
               <TextInput
                 className="mb-4 rounded-2xl bg-white px-4 py-3.5 text-base font-medium text-pn-navy"
-                placeholder="Ingresa tu Placa"
+                placeholder="Ingresa tu placa"
                 placeholderTextColor="#94a3b8"
                 value={plate}
                 onChangeText={setPlate}

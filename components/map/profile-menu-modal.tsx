@@ -5,13 +5,15 @@ import type { ComponentProps } from 'react';
 import { Alert, Modal, Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { SignOutButton } from '@/components/auth/sign-out-button';
 import { ParkNearColors } from '@/constants/parknear-theme';
-import type { UserProfilePreview } from '@/data/mock-user-profile';
+import { useAuth } from '@/contexts/auth-context';
+import { nombreMostradoPerfil, type UsuarioPerfilVista } from '@/data/mock-user-profile';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  user: UserProfilePreview;
+  user: UsuarioPerfilVista;
 };
 
 const iconMuted = '#64748b';
@@ -42,6 +44,7 @@ function MenuPill({
 
 export function ProfileMenuModal({ visible, onClose, user }: Props) {
   const insets = useSafeAreaInsets();
+  const { signOut } = useAuth();
 
   const handleSettings = () => {
     onClose();
@@ -55,6 +58,7 @@ export function ProfileMenuModal({ visible, onClose, user }: Props) {
 
   const handleLogout = () => {
     onClose();
+    signOut();
     router.replace('/login');
   };
 
@@ -80,9 +84,9 @@ export function ProfileMenuModal({ visible, onClose, user }: Props) {
           }}>
           <View className="mb-6 flex-row items-center gap-4">
             <View className="h-16 w-16 overflow-hidden rounded-full border border-pn-border/40 bg-pn-sky-fade/90">
-              {user.avatarUrl ? (
+              {user.avatar_url ? (
                 <Image
-                  source={{ uri: user.avatarUrl }}
+                  source={{ uri: user.avatar_url }}
                   style={{ width: '100%', height: '100%' }}
                   contentFit="cover"
                   accessibilityLabel="Foto de perfil"
@@ -95,7 +99,7 @@ export function ProfileMenuModal({ visible, onClose, user }: Props) {
             </View>
             <View className="min-w-0 flex-1">
               <Text className="text-lg font-bold leading-snug text-pn-navy" numberOfLines={2}>
-                {user.name}
+                {nombreMostradoPerfil(user)}
               </Text>
               <Text className="mt-1 text-sm text-pn-navy/50" numberOfLines={2}>
                 {user.email}
@@ -106,14 +110,7 @@ export function ProfileMenuModal({ visible, onClose, user }: Props) {
           <MenuPill icon="settings" label="Ajustes" onPress={handleSettings} />
           <MenuPill icon="help-outline" label="Ayuda" onPress={handleHelp} />
 
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar sesión"
-            onPress={handleLogout}
-            className="mt-1 flex-row items-center justify-center gap-2 rounded-full border border-red-200/90 bg-red-50/80 py-3.5 pl-4 pr-5 active:opacity-85">
-            <MaterialIcons name="logout" size={iconSize} color="#b91c1c" />
-            <Text className="text-[16px] font-semibold text-red-700">Cerrar sesión</Text>
-          </Pressable>
+          <SignOutButton onPress={handleLogout} className="mt-1" />
         </View>
       </View>
     </Modal>

@@ -1,9 +1,11 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ParkNearBackground } from '@/components/auth/parknear-background';
+import { useAuth } from '@/contexts/auth-context';
+import { routeForRole } from '@/lib/auth-routes';
 
 const LOGO = require('@/assets/images/branding/Parknear_logo-removebg-preview.png');
 
@@ -17,6 +19,11 @@ function useLogoSize() {
 
 export default function WelcomeScreen() {
   const { logoWidth, logoHeight } = useLogoSize();
+  const { user } = useAuth();
+
+  if (user) {
+    return <Redirect href={routeForRole(user.role)} />;
+  }
 
   return (
     <ParkNearBackground>

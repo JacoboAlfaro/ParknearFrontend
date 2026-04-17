@@ -18,7 +18,7 @@ export type LabeledFieldProps = Omit<InputProps, 'className' | 'secureTextEntry'
 
 export function LabeledField({
   label,
-  containerClassName = 'mb-4',
+  containerClassName = 'mb-2',
   inputClassName,
   className,
   showPasswordToggle,

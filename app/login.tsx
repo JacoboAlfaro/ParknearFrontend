@@ -1,5 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -19,16 +19,30 @@ import {
 import { BrandingHeader } from '@/components/auth/branding-header';
 import { LabeledField } from '@/components/molecules/labeled-field';
 import { ParkNearColors } from '@/constants/parknear-theme';
+import { useAuth } from '@/contexts/auth-context';
+import { routeForRole } from '@/lib/auth-routes';
 
 export default function LoginScreen() {
   const { width } = useWindowDimensions();
   const scrollBottomPad = authBackgroundFooterHeight(width) + 24;
+  const { user, signIn } = useAuth();
 
   const [documento, setDocumento] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  if (user) {
+    return <Redirect href={routeForRole(user.role)} />;
+  }
 
   const onLogin = () => {
-    router.replace('/(tabs)');
+    setError(null);
+    const result = signIn(documento, password);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    router.replace(routeForRole(result.role));
   };
 
   return (
@@ -57,9 +71,15 @@ export default function LoginScreen() {
                   <Text className="mt-1.5 text-2xl font-bold tracking-tight text-pn-navy">Accede</Text>
                 </View>
 
+                {error ? (
+                  <Text className="mb-3 rounded-xl bg-red-500/15 px-3 py-2 text-center text-sm text-red-800">
+                    {error}
+                  </Text>
+                ) : null}
+
                 <LabeledField
-                  label="Documento"
-                  placeholder="documento de identificación"
+                  label="Usuario"
+                  placeholder="Ingresa tu documento o correo"
                   value={documento}
                   onChangeText={setDocumento}
                   autoCapitalize="none"
@@ -68,7 +88,7 @@ export default function LoginScreen() {
 
                 <LabeledField
                   label="Contraseña"
-                  containerClassName="mb-5"
+                  containerClassName="mb-6"
                   placeholder="contraseña"
                   value={password}
                   onChangeText={setPassword}

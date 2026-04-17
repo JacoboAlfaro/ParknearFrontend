@@ -1,7 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,18 +20,36 @@ import {
 import { BrandingHeader } from '@/components/auth/branding-header';
 import { LabeledField } from '@/components/molecules/labeled-field';
 import { ParkNearColors } from '@/constants/parknear-theme';
+import { useAuth } from '@/contexts/auth-context';
+import { routeForRole } from '@/lib/auth-routes';
 
 export default function RegisterScreen() {
   const { width } = useWindowDimensions();
   const scrollBottomPad = authBackgroundFooterHeight(width) + 24;
+  const { user } = useAuth();
 
-  const [nombre, setNombre] = useState('');
+  const [nombres, setNombres] = useState('');
+  const [apellidos, setApellidos] = useState('');
   const [documento, setDocumento] = useState('');
+  const [celular, setCelular] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
+  if (user) {
+    return <Redirect href={routeForRole(user.role)} />;
+  }
+
   const onRegister = () => {
-    router.replace('/(tabs)');
+    if (!nombres.trim() || !apellidos.trim()) {
+      Alert.alert('Datos incompletos', 'Completa nombres y apellidos.');
+      return;
+    }
+    const soloDigitosCel = celular.trim().replace(/\D/g, '');
+    if (soloDigitosCel.length < 10 || soloDigitosCel.length > 13) {
+      Alert.alert('Celular', 'Ingresa un número válido (10 a 13 dígitos).');
+      return;
+    }
+    router.replace('/login');
   };
 
   return (
@@ -62,10 +81,18 @@ export default function RegisterScreen() {
                 </View>
 
                 <LabeledField
-                  label="Nombre completo"
-                  placeholder="Nombre Completo"
-                  value={nombre}
-                  onChangeText={setNombre}
+                  label="Nombre"
+                  placeholder="Nombre(s) del usuario"
+                  value={nombres}
+                  onChangeText={setNombres}
+                  autoCapitalize="words"
+                />
+
+                <LabeledField
+                  label="Apellidos"
+                  placeholder="Apellidos del usuario"
+                  value={apellidos}
+                  onChangeText={setApellidos}
                   autoCapitalize="words"
                 />
 
@@ -76,6 +103,15 @@ export default function RegisterScreen() {
                   onChangeText={setDocumento}
                   autoCapitalize="none"
                   autoCorrect={false}
+                />
+
+                <LabeledField
+                  label="Celular"
+                  placeholder="Ingresa tu número de celular"
+                  value={celular}
+                  onChangeText={setCelular}
+                  keyboardType="phone-pad"
+                  maxLength={13}
                 />
 
                 <LabeledField
@@ -109,7 +145,7 @@ export default function RegisterScreen() {
                       alignItems: 'center',
                       borderRadius: 16,
                     }}>
-                    <Text className="text-[17px] font-bold text-white">Registrate</Text>
+                    <Text className="text-[17px] font-bold text-white">Regístrate</Text>
                   </LinearGradient>
                 </Pressable>
               </View>

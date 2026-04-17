@@ -18,25 +18,25 @@ const USER_REGION_DELTA = 0.025;
 
 type MarkerAvailability = 'ok' | 'low' | 'none';
 
-function markerAvailability(availableSpots: number): MarkerAvailability {
-  if (availableSpots <= 0) return 'none';
-  if (availableSpots <= LOW_SPOTS_THRESHOLD) return 'low';
+function markerAvailability(cuposDisponibles: number): MarkerAvailability {
+  if (cuposDisponibles <= 0) return 'none';
+  if (cuposDisponibles <= LOW_SPOTS_THRESHOLD) return 'low';
   return 'ok';
 }
 
 function markerA11yLabel(m: ParkingMapMarker): string {
-  const tier = markerAvailability(m.availableSpots);
+  const tier = markerAvailability(m.cupos_disponibles);
   const spots =
     tier === 'none'
       ? 'sin cupos disponibles'
       : tier === 'low'
-        ? `pocos cupos, ${m.availableSpots} disponibles`
-        : `${m.availableSpots} cupos disponibles`;
-  return `Zona: ${m.streetLine}, ${m.title}. ${spots}`;
+        ? `pocos cupos, ${m.cupos_disponibles} disponibles`
+        : `${m.cupos_disponibles} cupos disponibles`;
+  return `Zona: ${m.linea_calle}, ${m.titulo}. ${spots}`;
 }
 
-function CarMapPin({ availableSpots }: { availableSpots: number }) {
-  const tier = markerAvailability(availableSpots);
+function CarMapPin({ cuposDisponibles }: { cuposDisponibles: number }) {
+  const tier = markerAvailability(cuposDisponibles);
   const backgroundColor =
     tier === 'none' ? MARKER_FULL : tier === 'low' ? MARKER_LOW : MARKER_BLUE;
 
@@ -65,7 +65,9 @@ export type ParkingMapProps = {
 export function ParkingMap({ markers, initialRegion, userLocation, onMarkerSelect }: ParkingMapProps) {
   const mapRef = useRef<MapView>(null);
   const region = useMemo(
-    () => initialRegion ?? regionFromMarkers(markers),
+    () =>
+      initialRegion ??
+      regionFromMarkers(markers.map((m) => ({ latitude: m.latitud, longitude: m.longitud }))),
     [initialRegion, markers]
   );
 
@@ -104,12 +106,12 @@ export function ParkingMap({ markers, initialRegion, userLocation, onMarkerSelec
         {markers.map((m) => (
           <Marker
             key={m.id}
-            coordinate={{ latitude: m.latitude, longitude: m.longitude }}
+            coordinate={{ latitude: m.latitud, longitude: m.longitud }}
             anchor={{ x: 0.5, y: 0.5 }}
             tracksViewChanges={tracksViews}
             onPress={() => onMarkerSelect?.(m)}
             accessibilityLabel={markerA11yLabel(m)}>
-            <CarMapPin availableSpots={m.availableSpots} />
+            <CarMapPin cuposDisponibles={m.cupos_disponibles} />
           </Marker>
         ))}
       </MapView>
