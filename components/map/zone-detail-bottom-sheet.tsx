@@ -18,9 +18,16 @@ type Props = {
   distanceKm: number;
   onClose: () => void;
   onReservePress?: () => void;
+  reservationLocked?: boolean; // Si hay una reserva activa no se permite otra reserva.
 };
 
-export function ZoneDetailBottomSheet({ marker, distanceKm, onClose, onReservePress }: Props) {
+export function ZoneDetailBottomSheet({
+  marker,
+  distanceKm,
+  onClose,
+  onReservePress,
+  reservationLocked = false,
+}: Props) {
   const sheetRef = useRef<ElementRef<typeof BottomSheet>>(null);
   const snapPoints = useMemo(() => ['44%', '62%'], []);
   const sheetIndex = marker ? 0 : -1;
@@ -50,9 +57,9 @@ export function ZoneDetailBottomSheet({ marker, distanceKm, onClose, onReservePr
   }, []);
 
   const onReserve = useCallback(() => {
-    if (!marker || marker.cupos_disponibles <= 0) return;
+    if (!marker || marker.cupos_disponibles <= 0 || reservationLocked) return;
     onReservePress?.();
-  }, [marker, onReservePress]);
+  }, [marker, onReservePress, reservationLocked]);
 
   if (Platform.OS === 'web') {
     return null;
@@ -122,7 +129,7 @@ export function ZoneDetailBottomSheet({ marker, distanceKm, onClose, onReservePr
                 </Text>
               </Text>
 
-              {marker.cupos_disponibles > 0 ? (
+              {marker.cupos_disponibles > 0 && !reservationLocked ? (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Reservar"
@@ -140,6 +147,13 @@ export function ZoneDetailBottomSheet({ marker, distanceKm, onClose, onReservePr
                     <Text className="text-[17px] font-bold text-white">Reserva</Text>
                   </LinearGradient>
                 </Pressable>
+              ) : marker.cupos_disponibles > 0 && reservationLocked ? (
+                <View className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/90 py-4">
+                  <Text className="px-3 text-center text-[15px] font-medium leading-snug text-pn-navy/85">
+                    Ya tienes una reserva activa. Espera a que termine el tiempo del contador para
+                    reservar de nuevo.
+                  </Text>
+                </View>
               ) : (
                 <View className="mt-6 rounded-2xl border border-pn-border/50 bg-pn-sky-fade/60 py-4">
                   <Text className="text-center text-[15px] font-medium text-pn-navy/55">

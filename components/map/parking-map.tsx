@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
 
 import type { ParkingMapMarker } from '@/data/mock-parking-markers';
 import type { UserMapCoords } from '@/hooks/use-user-map-location';
@@ -15,6 +15,9 @@ const PIN_SIZE = 42;
 const LOW_SPOTS_THRESHOLD = 3;
 
 const USER_REGION_DELTA = 0.025;
+
+const ROUTE_STROKE = '#2563eb';
+const ROUTE_WIDTH = 5;
 
 type MarkerAvailability = 'ok' | 'low' | 'none';
 
@@ -59,11 +62,22 @@ export type ParkingMapProps = {
   initialRegion?: Region;
   // Si hay coordenadas se muestra el punto del usuario y el mapa se anima hacia ellas.
   userLocation?: UserMapCoords | null;
+  routeToReservedZone?: { latitude: number; longitude: number } | null;
+  /** Origen guardado al pagar si el estado del hook aún no tenía coords. */
+  routeOriginSnapshot?: UserMapCoords | null;
   onMarkerSelect?: (marker: ParkingMapMarker) => void;
 };
 
-export function ParkingMap({ markers, initialRegion, userLocation, onMarkerSelect }: ParkingMapProps) {
+export function ParkingMap({
+  markers,
+  initialRegion,
+  userLocation,
+  routeToReservedZone,
+  routeOriginSnapshot,
+  onMarkerSelect,
+}: ParkingMapProps) {
   const mapRef = useRef<MapView>(null);
+  const [mapReady, setMapReady] = useState(false);
   const region = useMemo(
     () =>
       initialRegion ??
@@ -78,7 +92,7 @@ export function ParkingMap({ markers, initialRegion, userLocation, onMarkerSelec
   }, [markers]);
 
   useEffect(() => {
-    if (!userLocation || !mapRef.current) return;
+    if (!userLocation || !mapReady || !mapRef.current) return;
 
     mapRef.current.animateToRegion(
       {
@@ -89,9 +103,22 @@ export function ParkingMap({ markers, initialRegion, userLocation, onMarkerSelec
       },
       650
     );
-  }, [userLocation]);
+  }, [userLocation, mapReady]);
 
   const showUser = Boolean(userLocation);
+
+  const routeCoordinates = useMemo(() => {
+    if (!routeToReservedZone) return null;
+    const origin = userLocation ?? routeOriginSnapshot ?? null;
+    if (!origin) return null;
+    return [
+      { latitude: origin.latitude, longitude: origin.longitude },
+      {
+        latitude: routeToReservedZone.latitude,
+        longitude: routeToReservedZone.longitude,
+      },
+    ];
+  }, [userLocation, routeOriginSnapshot, routeToReservedZone]);
 
   return (
     <View style={styles.container}>
@@ -100,6 +127,7 @@ export function ParkingMap({ markers, initialRegion, userLocation, onMarkerSelec
         style={styles.map}
         provider={PROVIDER_GOOGLE}
         initialRegion={region}
+        onMapReady={() => setMapReady(true)}
         showsUserLocation={showUser}
         showsMyLocationButton={false}
         mapType="standard">
@@ -114,6 +142,17 @@ export function ParkingMap({ markers, initialRegion, userLocation, onMarkerSelec
             <CarMapPin cuposDisponibles={m.cupos_disponibles} />
           </Marker>
         ))}
+        {routeCoordinates ? (
+          <Polyline
+            coordinates={routeCoordinates}
+            strokeColor={ROUTE_STROKE}
+            strokeWidth={ROUTE_WIDTH}
+            geodesic
+            lineCap="round"
+            lineJoin="round"
+            zIndex={2}
+          />
+        ) : null}
       </MapView>
     </View>
   );

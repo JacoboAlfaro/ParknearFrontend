@@ -1,3 +1,4 @@
+import * as Location from 'expo-location';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useState } from 'react';
 import {
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 
 import type { ParkingMapMarker } from '@/data/mock-parking-markers';
+import type { UserMapCoords } from '@/hooks/use-user-map-location';
 import { formatCopCompact } from '@/lib/format-cop';
 import { formatDistanceEsKm } from '@/lib/distance-km';
 
@@ -22,9 +24,21 @@ type Props = {
   onClose: () => void;
   marker: ParkingMapMarker | null;
   distanceKm: number;
+  /** Tras completar el pago inicia el contador global de 15 min. */
+  onPaymentSuccess?: (
+    marker: ParkingMapMarker,
+    distanceKm: number,
+    ubicacionAlPagar: UserMapCoords | null,
+  ) => void;
 };
 
-export function ReservationPaymentModal({ visible, onClose, marker, distanceKm }: Props) {
+export function ReservationPaymentModal({
+  visible,
+  onClose,
+  marker,
+  distanceKm,
+  onPaymentSuccess,
+}: Props) {
   const [plate, setPlate] = useState('');
 
   const handleClose = useCallback(() => {
@@ -32,19 +46,33 @@ export function ReservationPaymentModal({ visible, onClose, marker, distanceKm }
     onClose();
   }, [onClose]);
 
-  const handlePay = useCallback(() => {
+  const handlePay = useCallback(async () => {
     const trimmed = plate.trim().toUpperCase();
     if (!trimmed) {
       Alert.alert('Placa', 'Ingresa la placa del vehículo.');
       return;
     }
     if (!marker) return;
-    Alert.alert(
-      'Reserva registrada',
-      `${formatCopCompact(marker.precio_cop)} · placa ${trimmed}`,
-    );
+
+    let ubicacionAlPagar: UserMapCoords | null = null;
+    try {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const pos = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        ubicacionAlPagar = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        };
+      }
+    } catch {
+      // Sin lectura GPS: igual se confirma la reserva; la línea usará snapshot vacío.
+    }
+
+    onPaymentSuccess?.(marker, distanceKm, ubicacionAlPagar);
     handleClose();
-  }, [plate, marker, handleClose]);
+  }, [plate, marker, distanceKm, onPaymentSuccess, handleClose]);
 
   const open = visible && marker !== null;
   const spotsLabel =
