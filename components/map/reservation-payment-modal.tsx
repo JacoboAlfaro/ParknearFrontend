@@ -2,6 +2,7 @@ import * as Location from 'expo-location';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Modal,
@@ -41,13 +42,16 @@ export function ReservationPaymentModal({
   onPaymentSuccess,
 }: Props) {
   const [plate, setPlate] = useState('');
+  const [paying, setPaying] = useState(false);
 
   const handleClose = useCallback(() => {
     setPlate('');
+    setPaying(false);
     onClose();
   }, [onClose]);
 
   const handlePay = useCallback(async () => {
+    if (paying) return;
     const trimmed = plate.trim().toUpperCase();
     if (!trimmed) {
       Alert.alert('Placa', 'Ingresa la placa del vehículo.');
@@ -55,6 +59,7 @@ export function ReservationPaymentModal({
     }
     if (!marker) return;
 
+    setPaying(true);
     let ubicacionAlPagar: UserMapCoords | null = null;
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
@@ -73,7 +78,7 @@ export function ReservationPaymentModal({
 
     onPaymentSuccess?.(marker, distanceKm, ubicacionAlPagar, trimmed);
     handleClose();
-  }, [plate, marker, distanceKm, onPaymentSuccess, handleClose]);
+  }, [paying, plate, marker, distanceKm, onPaymentSuccess, handleClose]);
 
   const open = visible && marker !== null;
   const spotsLabel =
@@ -148,10 +153,16 @@ export function ReservationPaymentModal({
                 accessibilityRole="button"
                 accessibilityLabel="Pagar"
                 onPress={handlePay}
-                className="items-center rounded-2xl bg-white py-3.5 active:opacity-90">
-                <Text className="text-[17px] font-bold" style={{ color: POPUP_BLUE }}>
-                  Pagar
-                </Text>
+                disabled={paying}
+                className="items-center rounded-2xl bg-white py-3.5 active:opacity-90"
+                style={paying ? { opacity: 0.6 } : undefined}>
+                {paying ? (
+                  <ActivityIndicator color={POPUP_BLUE} />
+                ) : (
+                  <Text className="text-[17px] font-bold" style={{ color: POPUP_BLUE }}>
+                    Pagar
+                  </Text>
+                )}
               </Pressable>
             </View>
           </View>

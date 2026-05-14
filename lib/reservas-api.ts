@@ -4,8 +4,8 @@ import type { EstadoReserva } from '@/models';
 export type CreateReservaInput = {
   id_conductor: string;
   id_zona: number;
-  placa: string;
-  fecha_fin: string; // ISO 8601
+  id_vehiculo: string; // placa del vehículo (max 10 chars)
+  fecha_fin: string;   // ISO 8601
 };
 
 export type ReservaApi = {
@@ -21,20 +21,63 @@ export type ReservaApi = {
   fecha_actualizacion: string;
 };
 
+export type ProcesarPagoInput = {
+  idReserva: number;
+  datosPago: {
+    transaction_amount: number;
+    token: string;            // token generado por Mercado Pago
+    installments: number;
+    payment_method_id: string; // ej: "master", "visa"
+    payer: {
+      email: string;
+    };
+  };
+};
+
+export type PagoApi = {
+  pago?: {
+    id: number;
+    id_reserva: number | null;
+    mp_id_transaccion: string | null;
+    monto: string;
+    metodo: 'efectivo' | 'mercadopago';
+    estado: 'pendiente' | 'aprobado' | 'rechazado' | 'reembolzado';
+    anotaciones: string | null;
+    fecha_creacion: string | null;
+    fecha_actualizacion: string | null;
+  };
+  mercadopago?: {
+    id: unknown;
+    status: unknown;
+    status_detail: unknown;
+  };
+};
+
 export async function crearReserva(input: CreateReservaInput): Promise<ReservaApi> {
   return apiJson<ReservaApi>('/reservas', {
     method: 'POST',
     json: {
       id_conductor: input.id_conductor,
       id_zona: input.id_zona,
-      placa: input.placa,
+      id_vehiculo: input.id_vehiculo,
       fecha_fin: input.fecha_fin,
     },
   });
 }
 
+export async function procesarPago(input: ProcesarPagoInput): Promise<PagoApi> {
+  return apiJson<PagoApi>('/pagos', {
+    method: 'POST',
+    json: input,
+  });
+}
+
 export async function obtenerReservasUsuario(userId: string): Promise<ReservaApi[]> {
   return apiJson<ReservaApi[]>(`/reservas/user/${userId}`);
+}
+
+export async function obtenerReservasZona(zonaId: number): Promise<ReservaApi[]> {
+  return apiJson<ReservaApi[]>(`/reservas/zona/${zonaId}`);
 }
 
 export async function obtenerReserva(id: number): Promise<ReservaApi> {

@@ -46,7 +46,8 @@ type AuthContextValue = {
 
 type AuthApiResponse = {
   user: {
-    id_usuario?: string;
+    id?: string;
+    id_usuario?: string; // por compatibilidad con versiones anteriores
     documento_identidad?: string;
     primer_nombre?: string;
     segundo_nombre?: string | null;
@@ -80,6 +81,7 @@ function mapTipoUsuario(tipo: unknown): UserRole | null {
   if (tipo === 'conductor') return 'conductor';
   if (tipo === 'controlador') return 'encargado';
   if (tipo === 'admin') return 'admin';
+  if (tipo === null || tipo === undefined || tipo === '') return 'conductor';
   return null;
 }
 
@@ -100,7 +102,7 @@ function sessionFromApiResponse(data: AuthApiResponse): SessionUser | null {
   const displayName = [nombres, apellidos].filter(Boolean).join(' ').trim() || data.user.email || 'Usuario';
 
   return {
-    id: (payload?.sub as string | undefined) ?? data.user.id_usuario ?? '',
+    id: (payload?.sub as string | undefined) ?? data.user.id ?? data.user.id_usuario ?? '',
     document: data.user.documento_identidad ?? '',
     role,
     displayName,
@@ -134,13 +136,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Restore session from persisted token on app start
   useEffect(() => {
-    tokenStorage.get().then((stored) => {
+    tokenStorage.get().then(async (stored) => {
       if (stored && !isTokenExpired(stored)) {
         tokenInMemory = stored;
-        const restored = sessionFromToken(stored);
-        if (restored) setUser(restored);
+        const savedUser = await tokenStorage.getUser<SessionUser>();
+        if (savedUser) {
+          setUser(savedUser);
+        } else {
+          const restored = sessionFromToken(stored);
+          if (restored) setUser(restored);
+        }
       } else if (stored) {
         tokenStorage.delete();
+        tokenStorage.deleteUser();
       }
       setInitialized(true);
     });
@@ -153,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     tokenInMemory = data.access_token;
     await tokenStorage.set(data.access_token);
+    await tokenStorage.setUser(session);
     setUser(session);
     return { ok: true, role: session.role };
   }, []);
@@ -192,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: input.email,
           contrasena: input.contrasena,
           celular: input.celular,
+          tipo_usuario: 'conductor',
         },
       });
       return await applyAuthResponse(data);
@@ -214,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     tokenInMemory = null;
     setUser(null);
-    await tokenStorage.delete();
+    await Promise.all([tokenStorage.delete(), tokenStorage.deleteUser()]);
   }, []);
 
   const value = useMemo(
