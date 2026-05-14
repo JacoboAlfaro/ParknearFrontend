@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -22,11 +23,12 @@ import { LabeledField } from '@/components/molecules/labeled-field';
 import { ParkNearColors } from '@/constants/parknear-theme';
 import { useAuth } from '@/contexts/auth-context';
 import { routeForRole } from '@/lib/auth-routes';
+import { partirNombreCompuesto } from '@/models';
 
 export default function RegisterScreen() {
   const { width } = useWindowDimensions();
   const scrollBottomPad = authBackgroundFooterHeight(width) + 24;
-  const { user } = useAuth();
+  const { user, signUp, loading } = useAuth();
 
   const [nombres, setNombres] = useState('');
   const [apellidos, setApellidos] = useState('');
@@ -34,14 +36,29 @@ export default function RegisterScreen() {
   const [celular, setCelular] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   if (user) {
     return <Redirect href={routeForRole(user.role)} />;
   }
 
-  const onRegister = () => {
+  const onRegister = async () => {
+    setError(null);
+
     if (!nombres.trim() || !apellidos.trim()) {
       Alert.alert('Datos incompletos', 'Completa nombres y apellidos.');
+      return;
+    }
+    if (!documento.trim()) {
+      Alert.alert('Datos incompletos', 'Ingresa tu número de documento.');
+      return;
+    }
+    if (!email.trim()) {
+      Alert.alert('Datos incompletos', 'Ingresa tu correo electrónico.');
+      return;
+    }
+    if (!password.trim()) {
+      Alert.alert('Datos incompletos', 'Ingresa una contraseña.');
       return;
     }
     const soloDigitosCel = celular.trim().replace(/\D/g, '');
@@ -49,7 +66,27 @@ export default function RegisterScreen() {
       Alert.alert('Celular', 'Ingresa un número válido (10 a 13 dígitos).');
       return;
     }
-    router.replace('/login');
+
+    const n = partirNombreCompuesto(nombres);
+    const a = partirNombreCompuesto(apellidos);
+
+    const result = await signUp({
+      documento_identidad: documento.trim(),
+      primer_nombre: n.primero,
+      segundo_nombre: n.segundo,
+      primer_apellido: a.primero,
+      segundo_apellido: a.segundo,
+      email: email.trim().toLowerCase(),
+      contrasena: password,
+      celular: soloDigitosCel,
+    });
+
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+
+    router.replace(routeForRole(result.role));
   };
 
   return (
@@ -80,8 +117,14 @@ export default function RegisterScreen() {
                   </Text>
                 </View>
 
+                {error ? (
+                  <Text className="mb-3 rounded-xl bg-red-500/15 px-3 py-2 text-center text-sm text-red-800">
+                    {error}
+                  </Text>
+                ) : null}
+
                 <LabeledField
-                  label="Nombre"
+                  label="Nombre(s)"
                   placeholder="Nombre(s) del usuario"
                   value={nombres}
                   onChangeText={setNombres}
@@ -98,7 +141,7 @@ export default function RegisterScreen() {
 
                 <LabeledField
                   label="Documento"
-                  placeholder="documento de identificación"
+                  placeholder="Número de documento"
                   value={documento}
                   onChangeText={setDocumento}
                   autoCapitalize="none"
@@ -107,7 +150,7 @@ export default function RegisterScreen() {
 
                 <LabeledField
                   label="Celular"
-                  placeholder="Ingresa tu número de celular"
+                  placeholder="Número de celular (10 dígitos)"
                   value={celular}
                   onChangeText={setCelular}
                   keyboardType="phone-pad"
@@ -115,8 +158,8 @@ export default function RegisterScreen() {
                 />
 
                 <LabeledField
-                  label="Correo"
-                  placeholder="correo electronico"
+                  label="Correo electrónico"
+                  placeholder="tu@correo.com"
                   value={email}
                   onChangeText={setEmail}
                   autoCapitalize="none"
@@ -135,7 +178,8 @@ export default function RegisterScreen() {
 
                 <Pressable
                   className="overflow-hidden rounded-2xl active:opacity-92 active:scale-[0.99]"
-                  onPress={onRegister}>
+                  onPress={onRegister}
+                  disabled={loading}>
                   <LinearGradient
                     colors={[ParkNearColors.navy, '#2A4F72']}
                     start={{ x: 0, y: 0 }}
@@ -145,7 +189,11 @@ export default function RegisterScreen() {
                       alignItems: 'center',
                       borderRadius: 16,
                     }}>
-                    <Text className="text-[17px] font-bold text-white">Regístrate</Text>
+                    {loading ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <Text className="text-[17px] font-bold text-white">Regístrate</Text>
+                    )}
                   </LinearGradient>
                 </Pressable>
               </View>

@@ -1,0 +1,52 @@
+import { apiJson } from '@/lib/api-fetch';
+import type { EstadoReserva } from '@/models';
+
+export type CreateReservaInput = {
+  id_conductor: string;
+  id_zona: number;
+  placa: string;
+  fecha_fin: string; // ISO 8601
+};
+
+export type ReservaApi = {
+  id: number;
+  id_conductor: string | null;
+  id_zona: number | null;
+  id_vehiculo: string | null;
+  fecha_real_inicio: string;
+  fecha_fin: string | null;
+  precio: number;
+  estado: EstadoReserva;
+  fecha_creacion: string;
+  fecha_actualizacion: string;
+};
+
+export async function crearReserva(input: CreateReservaInput): Promise<ReservaApi> {
+  return apiJson<ReservaApi>('/reservas', {
+    method: 'POST',
+    json: {
+      id_conductor: input.id_conductor,
+      id_zona: input.id_zona,
+      placa: input.placa,
+      fecha_fin: input.fecha_fin,
+    },
+  });
+}
+
+export async function obtenerReservasUsuario(userId: string): Promise<ReservaApi[]> {
+  return apiJson<ReservaApi[]>(`/reservas/user/${userId}`);
+}
+
+export async function obtenerReserva(id: number): Promise<ReservaApi> {
+  return apiJson<ReservaApi>(`/reservas/${id}`);
+}
+
+export async function actualizarEstadoReserva(
+  id: number,
+  estado: EstadoReserva,
+): Promise<ReservaApi> {
+  return apiJson<ReservaApi>(`/reservas/${id}/state`, {
+    method: 'PUT',
+    json: { estado },
+  });
+}

@@ -19,7 +19,11 @@ function useLogoSize() {
 
 export default function WelcomeScreen() {
   const { logoWidth, logoHeight } = useLogoSize();
-  const { user } = useAuth();
+  const { user, initialized } = useAuth();
+
+  if (!initialized) {
+    return <View className="flex-1 bg-white" />;
+  }
 
   if (user) {
     return <Redirect href={routeForRole(user.role)} />;

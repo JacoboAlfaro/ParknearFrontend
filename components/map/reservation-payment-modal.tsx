@@ -29,6 +29,7 @@ type Props = {
     marker: ParkingMapMarker,
     distanceKm: number,
     ubicacionAlPagar: UserMapCoords | null,
+    placa: string,
   ) => void;
 };
 
@@ -70,7 +71,7 @@ export function ReservationPaymentModal({
       // Sin lectura GPS: igual se confirma la reserva; la línea usará snapshot vacío.
     }
 
-    onPaymentSuccess?.(marker, distanceKm, ubicacionAlPagar);
+    onPaymentSuccess?.(marker, distanceKm, ubicacionAlPagar, trimmed);
     handleClose();
   }, [plate, marker, distanceKm, onPaymentSuccess, handleClose]);
 

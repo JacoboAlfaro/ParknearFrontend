@@ -22,6 +22,10 @@ module.exports = () => {
           },
         },
       },
+      plugins: [
+        ...(appJson.expo.plugins ?? []),
+        'expo-secure-store',
+      ],
     },
   };
 };

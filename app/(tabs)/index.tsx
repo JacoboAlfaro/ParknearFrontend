@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,11 +11,12 @@ import { ZoneDetailBottomSheet } from '@/components/map/zone-detail-bottom-sheet
 import { ActiveReservationProvider, useActiveReservation } from '@/contexts/active-reservation-context';
 import { useAuth } from '@/contexts/auth-context';
 import type { ParkingMapMarker } from '@/data/mock-parking-markers';
-import { MOCK_PARKING_MARKERS } from '@/data/mock-parking-markers';
 import { usuarioPerfilDesdeSesionMapa } from '@/data/mock-user-profile';
 import type { UserMapCoords } from '@/hooks/use-user-map-location';
 import { useUserMapLocation } from '@/hooks/use-user-map-location';
 import { distanceBetweenKm } from '@/lib/distance-km';
+import { crearReserva } from '@/lib/reservas-api';
+import { fetchZonasMarcadores } from '@/lib/zonas-api';
 
 type PaymentContext = {
   marker: ParkingMapMarker;
@@ -26,6 +27,16 @@ function MapScreenInner() {
   const { user: sessionUser } = useAuth();
   const userLocation = useUserMapLocation();
   const { hasActiveReservation, startReservation, active } = useActiveReservation();
+
+  const [markers, setMarkers] = useState<ParkingMapMarker[]>([]);
+
+  useEffect(() => {
+    fetchZonasMarcadores()
+      .then(setMarkers)
+      .catch(() => {
+        // Si falla la carga de zonas, el mapa queda vacío
+      });
+  }, []);
 
   const routeToReservedZone = useMemo(() => {
     if (!hasActiveReservation || !active) return null;
@@ -89,15 +100,26 @@ function MapScreenInner() {
   }, []);
 
   const handlePaymentSuccess = useCallback(
-    (marker: ParkingMapMarker, km: number, ubicacionAlPagar: UserMapCoords | null) => {
+    (marker: ParkingMapMarker, km: number, ubicacionAlPagar: UserMapCoords | null, placa: string) => {
       startReservation(marker, km, ubicacionAlPagar);
       setSelectedMarker(null);
       Alert.alert(
         'Reserva realizada',
         'Tu reserva se registró correctamente. Comenzó el contador de 15 minutos para llegar a la zona azul.',
       );
+      if (sessionUser) {
+        const fechaFin = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+        crearReserva({
+          id_conductor: sessionUser.id,
+          id_zona: marker.id,
+          placa,
+          fecha_fin: fechaFin,
+        }).catch(() => {
+          // La reserva local ya está activa; el error del backend no interrumpe la experiencia
+        });
+      }
     },
-    [startReservation]
+    [startReservation, sessionUser]
   );
 
   const perfilMapa = useMemo(() => {
@@ -111,7 +133,7 @@ function MapScreenInner() {
     <SafeAreaView className="flex-1 bg-pn-sky-fade" edges={['top']}>
       <View className="relative flex-1">
         <ParkingMap
-          markers={MOCK_PARKING_MARKERS}
+          markers={markers}
           userLocation={userLocation}
           routeToReservedZone={routeToReservedZone}
           routeOriginSnapshot={routeOriginSnapshot}

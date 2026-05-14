@@ -2,6 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -25,9 +26,9 @@ import { routeForRole } from '@/lib/auth-routes';
 export default function LoginScreen() {
   const { width } = useWindowDimensions();
   const scrollBottomPad = authBackgroundFooterHeight(width) + 24;
-  const { user, signIn } = useAuth();
+  const { user, signIn, loading } = useAuth();
 
-  const [documento, setDocumento] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -35,9 +36,9 @@ export default function LoginScreen() {
     return <Redirect href={routeForRole(user.role)} />;
   }
 
-  const onLogin = () => {
+  const onLogin = async () => {
     setError(null);
-    const result = signIn(documento, password);
+    const result = await signIn(email.trim(), password);
     if (!result.ok) {
       setError(result.message);
       return;
@@ -78,11 +79,12 @@ export default function LoginScreen() {
                 ) : null}
 
                 <LabeledField
-                  label="Usuario"
-                  placeholder="Ingresa tu documento o correo"
-                  value={documento}
-                  onChangeText={setDocumento}
+                  label="Correo electrónico"
+                  placeholder="tu@correo.com"
+                  value={email}
+                  onChangeText={setEmail}
                   autoCapitalize="none"
+                  keyboardType="email-address"
                   autoCorrect={false}
                 />
 
@@ -97,7 +99,8 @@ export default function LoginScreen() {
 
                 <Pressable
                   className="overflow-hidden rounded-2xl active:opacity-92 active:scale-[0.99]"
-                  onPress={onLogin}>
+                  onPress={onLogin}
+                  disabled={loading}>
                   <LinearGradient
                     colors={[ParkNearColors.navy, '#2A4F72']}
                     start={{ x: 0, y: 0 }}
@@ -107,7 +110,11 @@ export default function LoginScreen() {
                       alignItems: 'center',
                       borderRadius: 16,
                     }}>
-                    <Text className="text-[17px] font-bold text-white">Ingresar</Text>
+                    {loading ? (
+                      <ActivityIndicator color="#ffffff" />
+                    ) : (
+                      <Text className="text-[17px] font-bold text-white">Ingresar</Text>
+                    )}
                   </LinearGradient>
                 </Pressable>
               </View>
