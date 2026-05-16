@@ -112,7 +112,7 @@ function MapScreenInner() {
         crearReserva({
           id_conductor: sessionUser.id,
           id_zona: marker.id,
-          placa,
+          id_vehiculo: placa,
           fecha_fin: fechaFin,
         }).catch(() => {
           // La reserva local ya está activa; el error del backend no interrumpe la experiencia
