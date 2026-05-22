@@ -88,9 +88,6 @@ export function ZoneDetailBottomSheet({
                     Zonas azules
                   </Text>
                   <Text className="mt-1 text-2xl font-bold text-pn-navy" numberOfLines={2}>
-                    {marker.linea_calle}
-                  </Text>
-                  <Text className="mt-0.5 text-sm text-pn-navy/50" numberOfLines={1}>
                     {marker.titulo}
                   </Text>
                 </View>
@@ -150,8 +147,7 @@ export function ZoneDetailBottomSheet({
               ) : marker.cupos_disponibles > 0 && reservationLocked ? (
                 <View className="mt-6 rounded-2xl border border-amber-200 bg-amber-50/90 py-4">
                   <Text className="px-3 text-center text-[15px] font-medium leading-snug text-pn-navy/85">
-                    Ya tienes una reserva activa. Espera a que termine el tiempo del contador para
-                    reservar de nuevo.
+                    Ya tienes una reserva activa. Espera a que termine el tiempo del contador para reservar de nuevo.
                   </Text>
                 </View>
               ) : (

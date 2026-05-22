@@ -1,3 +1,4 @@
+import { logApiError } from '@/lib/api-log';
 import { resolveApiUrl } from '@/lib/api-config';
 
 export class ApiHttpError extends Error {
@@ -46,17 +47,32 @@ export async function apiFetch(path: string, options: ApiFetchOptions = {}): Pro
 }
 
 export async function apiJson<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-  const res = await apiFetch(path, options);
-  const text = await res.text();
-  if (!res.ok) {
-    throw new ApiHttpError(res.status, text, res.statusText || undefined);
-  }
-  if (!text.trim()) {
-    return undefined as T;
-  }
+  const method = options.method ?? 'GET';
+  const url = resolveApiUrl(path);
+
   try {
-    return JSON.parse(text) as T;
-  } catch {
-    throw new ApiHttpError(res.status, text, 'La respuesta no es JSON válido');
+    const res = await apiFetch(path, options);
+    const text = await res.text();
+    if (!res.ok) {
+      const httpErr = new ApiHttpError(res.status, text, res.statusText || undefined);
+      // logApiError(`${method} ${path}`, httpErr, { url, requestBody: options.json});
+      throw httpErr;
+    }
+    if (!text.trim()) {
+      return undefined as T;
+    }
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      const parseErr = new ApiHttpError(res.status, text, 'La respuesta no es JSON válido');
+      //logApiError(`${method} ${path} (JSON inválido)`, parseErr, { url });
+      throw parseErr;
+    }
+  } catch (err) {
+    if (err instanceof ApiHttpError) {
+      throw err;
+    }
+    //logApiError(`${method} ${path} (red)`, err, { url, requestBody: options.json });
+    throw err;
   }
 }

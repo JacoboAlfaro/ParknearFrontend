@@ -15,7 +15,7 @@ import { usuarioPerfilDesdeSesionMapa } from '@/data/mock-user-profile';
 import type { UserMapCoords } from '@/hooks/use-user-map-location';
 import { useUserMapLocation } from '@/hooks/use-user-map-location';
 import { distanceBetweenKm } from '@/lib/distance-km';
-import { crearReserva } from '@/lib/reservas-api';
+import type { PagoReservaExitoso } from '@/lib/mercadopago-payment-flow';
 import { fetchZonasMarcadores } from '@/lib/zonas-api';
 
 type PaymentContext = {
@@ -30,13 +30,18 @@ function MapScreenInner() {
 
   const [markers, setMarkers] = useState<ParkingMapMarker[]>([]);
 
-  useEffect(() => {
-    fetchZonasMarcadores()
-      .then(setMarkers)
-      .catch(() => {
-        // Si falla la carga de zonas, el mapa queda vacío
-      });
+  const reloadMarkers = useCallback(async () => {
+    try {
+      const next = await fetchZonasMarcadores();
+      setMarkers(next);
+    } catch {
+      // Si falla, se mantienen los marcadores actuales
+    }
   }, []);
+
+  useEffect(() => {
+    void reloadMarkers();
+  }, [reloadMarkers]);
 
   const routeToReservedZone = useMemo(() => {
     if (!hasActiveReservation || !active) return null;
@@ -100,26 +105,36 @@ function MapScreenInner() {
   }, []);
 
   const handlePaymentSuccess = useCallback(
-    (marker: ParkingMapMarker, km: number, ubicacionAlPagar: UserMapCoords | null, placa: string) => {
+    (
+      marker: ParkingMapMarker,
+      km: number,
+      ubicacionAlPagar: UserMapCoords | null,
+      _placa: string,
+      pago: PagoReservaExitoso,
+    ) => {
       startReservation(marker, km, ubicacionAlPagar);
       setSelectedMarker(null);
-      Alert.alert(
-        'Reserva realizada',
-        'Tu reserva se registró correctamente. Comenzó el contador de 15 minutos para llegar a la zona azul.',
-      );
-      if (sessionUser) {
-        const fechaFin = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-        crearReserva({
-          id_conductor: sessionUser.id,
-          id_zona: marker.id,
-          id_vehiculo: placa,
-          fecha_fin: fechaFin,
-        }).catch(() => {
-          // La reserva local ya está activa; el error del backend no interrumpe la experiencia
-        });
+      void reloadMarkers();
+      const reservaTxt = pago.reservaId ? `\nReserva #${pago.reservaId}` : '';
+      const pagoTxt = pago.pagoId ? `\nPago #${pago.pagoId}` : '';
+
+      if (pago.metodoPago === 'efectivo_zona') {
+        Alert.alert(
+          'Pago aprobado',
+          `Reserva pagada con Mercado Pago${pago.mpTransactionId ? `\nID ${pago.mpTransactionId}` : ''}${reservaTxt}${pagoTxt}\n\n` +
+            'Las horas de estacionamiento se pagan en efectivo al llegar a la zona.\n\n' +
+            'Comenzó el contador de 15 minutos para llegar.',
+        );
+        return;
       }
+
+      Alert.alert(
+        'Pago aprobado',
+        `Mercado Pago${pago.mpTransactionId ? `\nID ${pago.mpTransactionId}` : ''}${reservaTxt}${pagoTxt}\n\n` +
+          'Tu reserva quedó activa. Comenzó el contador de 15 minutos para llegar a la zona azul.',
+      );
     },
-    [startReservation, sessionUser]
+    [startReservation, reloadMarkers],
   );
 
   const perfilMapa = useMemo(() => {
@@ -157,6 +172,9 @@ function MapScreenInner() {
           onClose={closePaymentModal}
           marker={paymentContext?.marker ?? null}
           distanceKm={paymentContext?.distanceKm ?? 0}
+          idConductor={sessionUser?.id}
+          documentoConductor={sessionUser?.document}
+          payerEmail={sessionUser?.email}
           onPaymentSuccess={handlePaymentSuccess}
         />
         <ProfileMenuModal
